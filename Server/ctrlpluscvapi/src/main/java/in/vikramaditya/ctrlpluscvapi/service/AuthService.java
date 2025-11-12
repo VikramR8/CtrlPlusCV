@@ -3,6 +3,7 @@ package in.vikramaditya.ctrlpluscvapi.service;
 import in.vikramaditya.ctrlpluscvapi.document.User;
 import in.vikramaditya.ctrlpluscvapi.dto.AuthResponse;
 import in.vikramaditya.ctrlpluscvapi.dto.RegisterRequest;
+import in.vikramaditya.ctrlpluscvapi.exception.ResourceExistsException;
 import in.vikramaditya.ctrlpluscvapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,7 @@ public class AuthService {
         log.info("Inside AuthService: register() {}", request);
 
         if(userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("User already exists with this email");
+            throw new ResourceExistsException("User already exists with this email");
         }
         User newUser = toDocument(request);
 
