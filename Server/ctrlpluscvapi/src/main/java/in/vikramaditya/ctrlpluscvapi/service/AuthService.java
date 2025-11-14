@@ -7,6 +7,7 @@ import in.vikramaditya.ctrlpluscvapi.exception.ResourceExistsException;
 import in.vikramaditya.ctrlpluscvapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,10 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
+
+    @Value("${app.base.url:http://localhost:8080}")
+    private String appBaseUrl;
 
     public AuthResponse register(RegisterRequest request) {
         log.info("Inside AuthService: register() {}", request);
@@ -26,12 +31,31 @@ public class AuthService {
             throw new ResourceExistsException("User already exists with this email");
         }
         User newUser = toDocument(request);
-
         userRepository.save(newUser);
-
-        //TODO: send verification email;
-
+        sendVerificationEmail(newUser);
         return toResponse(newUser);
+    }
+
+    private void sendVerificationEmail(User newUser) {
+        try {
+            String link = appBaseUrl + "/api/auth/verify-email?token=" + newUser.getVerificationToken();
+            String html = "<div style='font-family:Arial, sans-serif; max-width:600px; margin:20px auto; padding:20px; border:1px solid #eaeaea; border-radius:10px;'>"
+                            + "<h2 style='color:#0d6efd; margin-bottom:10px;'>Verify your email</h2>"
+                            + "<p>Hi " + newUser.getName() + ", please confirm your email to continue.</p>"
+                            + "<p style='margin:16px 0;'>"
+                            + "<a href='" + link + "' "
+                            + "style='display:inline-block; padding:10px 16px; background:#0d6efd; color:white; text-decoration:none; border-radius:6px;'>"
+                            + "Verify Email</a>"
+                            + "</p>"
+                            + "<p>Or copy this link:</p>"
+                            + "<p style='word-break:break-all;'>" + link + "</p>"
+                            + "<p style='color:#777; font-size:12px; margin-top:20px;'>This link expires in 24 hours.</p>"
+                            + "</div>";
+            emailService.sendHtmlEmail(newUser.getEmail(), "Verify your email", html);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send verification email: " + e.getMessage());
+        }
     }
     private AuthResponse toResponse(User newUser) {
         return AuthResponse.builder()
@@ -56,6 +80,5 @@ public class AuthService {
                 .verificationToken(UUID.randomUUID().toString())
                 .verificationExpires(LocalDateTime.now().plusHours(24))
                 .build();
-
     }
 }
