@@ -1,6 +1,7 @@
 package in.vikramaditya.ctrlpluscvapi.controller;
 
 import in.vikramaditya.ctrlpluscvapi.dto.AuthResponse;
+import in.vikramaditya.ctrlpluscvapi.dto.LoginRequest;
 import in.vikramaditya.ctrlpluscvapi.dto.RegisterRequest;
 import in.vikramaditya.ctrlpluscvapi.service.AuthService;
 import in.vikramaditya.ctrlpluscvapi.service.FileUploadService;
@@ -45,6 +46,12 @@ public class AuthController {
     public ResponseEntity<?> uploadImage(@RequestPart("image")MultipartFile file) throws IOException {
         log.info("Inside AuthController - uploadImage()");
         Map<String , String> response = fileUploadService.uploadSingleImage(file);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(LOGIN)
+    public ResponseEntity<?> login (@RequestBody LoginRequest request) {
+        AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
 }

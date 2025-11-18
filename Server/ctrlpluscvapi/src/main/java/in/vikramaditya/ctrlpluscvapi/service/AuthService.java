@@ -2,12 +2,15 @@ package in.vikramaditya.ctrlpluscvapi.service;
 
 import in.vikramaditya.ctrlpluscvapi.document.User;
 import in.vikramaditya.ctrlpluscvapi.dto.AuthResponse;
+import in.vikramaditya.ctrlpluscvapi.dto.LoginRequest;
 import in.vikramaditya.ctrlpluscvapi.dto.RegisterRequest;
 import in.vikramaditya.ctrlpluscvapi.exception.ResourceExistsException;
 import in.vikramaditya.ctrlpluscvapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -20,6 +23,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${app.base.url:http://localhost:8080}")
     private String appBaseUrl;
@@ -75,7 +79,7 @@ public class AuthService {
         return User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .password(request.getPassword())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .profileImageUrl(request.getProfileImageUrl())
                 .subscriptionPlan("Basic")
                 .emailVerified(false)
@@ -96,5 +100,19 @@ public class AuthService {
         user.setVerificationToken(null);
         user.setVerificationExpires(null);
         userRepository.save(user);
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        User existingUser = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(()-> new UsernameNotFoundException("Invalid email or password"));
+        if(!passwordEncoder.matches(request.getPassword(), existingUser.getPassword())) {
+            throw new UsernameNotFoundException("Invalid email or Password");
+        }
+
+        String token = "jwtToken";
+        AuthResponse response = toResponse(existingUser);
+        response.setToken(token);
+        return response;
+
     }
 }
