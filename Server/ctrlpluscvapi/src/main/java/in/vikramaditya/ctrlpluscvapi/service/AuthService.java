@@ -6,6 +6,7 @@ import in.vikramaditya.ctrlpluscvapi.dto.LoginRequest;
 import in.vikramaditya.ctrlpluscvapi.dto.RegisterRequest;
 import in.vikramaditya.ctrlpluscvapi.exception.ResourceExistsException;
 import in.vikramaditya.ctrlpluscvapi.repository.UserRepository;
+import in.vikramaditya.ctrlpluscvapi.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +25,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     @Value("${app.base.url:http://localhost:8080}")
     private String appBaseUrl;
@@ -108,11 +110,14 @@ public class AuthService {
         if(!passwordEncoder.matches(request.getPassword(), existingUser.getPassword())) {
             throw new UsernameNotFoundException("Invalid email or Password");
         }
-
-        String token = "jwtToken";
+        if(!existingUser.isEmailVerified()) {
+            throw new RuntimeException("Please verify your email before logging in");
+        }
+        String token = jwtUtil.generateToken(existingUser.getId());
         AuthResponse response = toResponse(existingUser);
         response.setToken(token);
         return response;
-
     }
+
+
 }
